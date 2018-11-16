@@ -9,11 +9,23 @@ class Board(object):
         self.projectKey = ""
         self.projectId = ""
         self.boardName = boardName
-        self.issues = []
+        self.allIssues = []
 
     def findAllIssues(self):
         for issue in self.jira.search_issues(jql_str="project="+self.projectKey, maxResults=1000):
-            self.issues.append(Issue(issue))
+            self.allIssues.append(Issue(issue))
+        return self.allIssues
+
+    def createNewIssue(self, summary, description, issueType, assigneeName):
+        newIssue = {
+                'project': {'id': self.projectId},
+                'summary': summary,
+                'description': description,
+                'issuetype': {'name': issueType},
+                'assignee': {'name': assigneeName}
+            }
+        self.jira.create_issue(fields=newIssue)
+
 
     def connectToBoard(self):
         options = {'server': self.serverUrl}
@@ -92,16 +104,34 @@ class Issue(object):
         self.creatorDisplayName = issue.raw['fields']['creator']['displayName']
         self.progress = issue.raw['fields']['progress']['progress']
         self.progressTotal = issue.raw['fields']['progress']['total']
+        self.assignee = issue.raw['fields']['assignee']
+        if issue.raw['fields']['assignee'] != None:
+            self.assigneeName = issue.raw['fields']['assignee']['displayName']
+            self.assigneeKey = issue.raw['fields']['assignee']['key']
+            self.assigneeAccountId = issue.raw['fields']['assignee']['accountId']
+        else:
+            self.assigneeName = None
+            self.assigneeKey = None
+            self.assigneeAccountId = None
 
 if __name__ == "__main__":
     board = Board('https://megatm.atlassian.net', 'mega.7eam@gmail.com', 'satxon-7tinfu-piTpiz', 'MegaTeam', 'MEGAT board')
     board.connectToBoard()
-    print(board.jira.projects())
+
+    # board.createNewIssue(summary="New issue3", description="Some description", issueType="Story", assigneeName="dogn2000")
+    # board.findAllIssues()
+    # print(Issue(board.jira.issue('MEGAT-1')).assigneeName)
+    # print(Issue(board.jira.issue('MEGAT-4')).progress)
+    # print(Issue(board.jira.issue('MEGAT-4')).progressTotal)
+
+    # issues = board.findAllIssues()
+    # for issue in issues:
+    #     print(str(issue.summary) + ':' + str(issue.assigneeName))
 
     #Find all issues example
-    board.findAllIssues()
-    for issue in board.issues:
-        print("Key: " + str(issue.key))
-        print("Summary: " + str(issue.summary))
-        print("Description: " + str(issue.description))
-        print("")
+    # board.findAllIssues()
+    # for issue in board.issues:
+    #     print("Key: " + str(issue.key))
+    #     print("Summary: " + str(issue.summary))
+    #     print("Description: " + str(issue.description))
+    #     print("")
