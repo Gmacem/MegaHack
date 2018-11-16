@@ -15,6 +15,14 @@ class Board(object):
         for issue in self.jira.search_issues(jql_str="project="+self.projectKey, maxResults=1000):
             self.issues.append(Issue(issue))
 
+    def findAllIssuesInProject(self):
+        projectIssues = []
+        for issue in self.jira.search_issues(jql_str="project="+self.projectKey, maxResults=1000):
+            if Issue(issue).projectId == self.projectId:
+                projectIssues.append(Issue(issue))
+        return projectIssues
+
+
     def connectToBoard(self):
         options = {'server': self.serverUrl}
         authData = (self.username, self.password)
@@ -99,9 +107,9 @@ if __name__ == "__main__":
     print(board.jira.projects())
 
     #Find all issues example
-    board.findAllIssues()
-    for issue in board.issues:
-        print("Key: " + str(issue.key))
-        print("Summary: " + str(issue.summary))
-        print("Description: " + str(issue.description))
-        print("")
+    # board.findAllIssues()
+    # for issue in board.issues:
+    #     print("Key: " + str(issue.key))
+    #     print("Summary: " + str(issue.summary))
+    #     print("Description: " + str(issue.description))
+    #     print("")
