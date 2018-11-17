@@ -10,6 +10,8 @@ class Board(object):
         self.projectId = ""
         self.boardName = boardName
         self.allIssues = []
+        self.issuesIdxesById = {}
+        self.issuesIdxesBySummery = {}
         self.allUsers = []
         self.notWorkingUsers = []
         self.workingUsers = []
@@ -23,13 +25,17 @@ class Board(object):
         self.getNotWorkingUsers()
 
     def getAllIssues(self):
+        i = 0
         for issue in self.jira.search_issues(jql_str="project="+self.projectKey, maxResults=1000):
-            self.allIssues.append(Issue(issue))
+            newIssue = Issue(issue)
+            self.allIssues.append(newIssue)
+            self.issuesIdxesById.update({newIssue.id: i})
+            self.issuesIdxesBySummery.update({newIssue.summary: i})
+            i += 1
         return self.allIssues
 
     def getAllProjectUsers(self):
         users = self.jira.search_assignable_users_for_projects(username='', projectKeys=[self.projectKey])
-        print(users)
         for i in range(len(users)):
             curUser = User(users[i])
             self.allUsers.append(curUser)
@@ -43,7 +49,7 @@ class Board(object):
             if issue.status != "Done" and issue.assigneeName is not None and issue.assigneeName != self.jira.myself()['displayName']:
                 workingUsers.add(issue.assigneeName)
         for workingUser in workingUsers:
-            self.workingUsers.append(User(self.jira.user(workingUser)))
+            self.workingUsers.append(User(self.jira.search_users(workingUser)[0]))
         return self.workingUsers
 
     def getNotWorkingUsers(self):
@@ -62,6 +68,13 @@ class Board(object):
             }
         self.jira.create_issue(fields=newIssue)
 
+    def getIssuesArrayStatus(self, issuesSummerysArray):
+        issuesStatuses = {}
+        for issueSummery in issuesSummerysArray:
+            if issueSummery in self.issuesIdxesBySummery.keys():
+                curStatus = self.allIssues[self.issuesIdxesBySummery[issueSummery]].status
+                issuesStatuses.update({issueSummery: curStatus})
+        return issuesStatuses
 
     def connectToBoard(self):
         options = {'server': self.serverUrl}
@@ -157,15 +170,19 @@ class Issue(object):
             self.assigneeKey = None
             self.assigneeAccountId = None
 
-    def setParams(self, summary, description, assigneeKey, labels):
-        fileds = {
-            'summary': summary,
-            'description': description,
-            'assignee': {'key': assigneeKey},
-            'labels': labels
-        }
-        print(self)
-        self.update(fields=fileds)
+    def setParams(summary, description, assigneeName, labels, id):
+        fileds = {}
+        issue = board.jira.issue(board.allIssues[id].id)
+        if summary is not None:
+            fileds.update({'summary': "New Task"})
+        if description is not None:
+            fileds.update({'description': "New task description"})
+        if assigneeName is not None:
+            fileds.update({'assignee': {'name': assigneeName}})
+        if labels is not None:
+            fileds.update({'labels': labels})
+        print(issue)
+        issue.update(fields=fileds)
 
 
 class User(object):
@@ -183,25 +200,27 @@ if __name__ == "__main__":
     board = Board('https://megatm.atlassian.net', 'mega.7eam@gmail.com', 'satxon-7tinfu-piTpiz', 'MegaTeam', 'MEGAT board')
     board.launchBoard()
 
+    issuesIdArray = []
+    for issue in board.allIssues:
+        issuesIdArray.append(issue.summary)
+        print(issue.id)
+        print(issue.summary)
+        print()
 
-    print("Working users:")
-    for workingUser in board.workingUsers:
-        print(workingUser.displayName)
+    issuesStatuses = board.getIssuesArrayStatus(issuesIdArray)
+    print(issuesStatuses)
 
-    print("\nNot working users:")
-    for notWorkingUser in board.notWorkingUsers:
-        print(notWorkingUser.displayName)
-
-    print("\nAdmins:")
-    for admin in board.adminUsers:
-        print(admin.displayName)
-
-    # issue.setParams(summary="New Task", description="New task description", assigneeKey=, labels=)
-
-    # board.createNewIssue(summary="New issue3", description="Some description", issueType="Story", assigneeName="dogn2000")
-    # print(Issue(board.jira.issue('MEGAT-1')).assigneeName)
-    # print(Issue(board.jira.issue('MEGAT-4')).progress)
-    # print(Issue(board.jira.issue('MEGAT-4')).progressTotal)
+    # print("Working users:")
+    # for workingUser in board.workingUsers:
+    #     print(workingUser.displayName)
+    #
+    # print("\nNot working users:")
+    # for notWorkingUser in board.notWorkingUsers:
+    #     print(notWorkingUser.displayName)
+    #
+    # print("\nAdmins:")
+    # for admin in board.adminUsers:
+    #     print(admin.displayName)
 
     #Find all issues example
     # for issue in board.allIssues:
