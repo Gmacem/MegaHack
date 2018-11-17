@@ -106,13 +106,19 @@ class Board(object):
             print("Failed to find project!")
             return False
 
+    def checkUserData(self):
+        options = {'server': self.serverUrl}
+        authData = (self.username, self.password)
+        try:
+            JIRA(server=self.serverUrl, options=options, auth=authData)
+        except:
+            return False
+        return True
 
     def checkServer(self):
         try:
             JIRA(server=self.serverUrl)
-        except Exception as e:
-            print(e)
-            print("Failed to connect to server")
+        except:
             return False
         return True
 
