@@ -10,11 +10,28 @@ class Board(object):
         self.projectId = ""
         self.boardName = boardName
         self.allIssues = []
+        self.allUsers = []
+        self.workers = []
 
-    def findAllIssues(self):
+    def getAllIssues(self):
         for issue in self.jira.search_issues(jql_str="project="+self.projectKey, maxResults=1000):
             self.allIssues.append(Issue(issue))
         return self.allIssues
+
+    def getAllProjectUsers(self):
+        users = board.jira.search_assignable_users_for_projects(username='', projectKeys=[self.projectKey])
+        for user in users:
+            self.allUsers.append(user.displayName)
+        return users
+
+    def getWorkers(self):
+        self.getAllIssues()
+        workers = set()
+        for issue in self.allIssues:
+            if issue.status != "Done" and issue.assigneeName != None:
+                workers.add(Worker(issue).name)
+        self.workers.append(list(workers))
+        return list(workers)
 
     def createNewIssue(self, summary, description, issueType, assigneeName):
         newIssue = {
@@ -104,6 +121,7 @@ class Issue(object):
         self.creatorDisplayName = issue.raw['fields']['creator']['displayName']
         self.progress = issue.raw['fields']['progress']['progress']
         self.progressTotal = issue.raw['fields']['progress']['total']
+        self.timeEstimate = issue.raw['fields']['timeestimate']
         self.assignee = issue.raw['fields']['assignee']
         if issue.raw['fields']['assignee'] != None:
             self.assigneeName = issue.raw['fields']['assignee']['displayName']
@@ -114,9 +132,34 @@ class Issue(object):
             self.assigneeKey = None
             self.assigneeAccountId = None
 
+    #TODO
+    # def setParams(self, board, issueId, summary, description):#, assigneeKey, labels):
+    #     issue = board.jira.issue(issueId)
+    #     issue.fields.summary = summary
+    #     issue.fields.description = description
+    #     # new_issue.fields.assignee.key = assigneeKey
+    #     issue.update()
+
+
+class Worker(object):
+    def __init__(self, issue):
+        self.name = issue.assigneeName
+        self.key = issue.assigneeKey
+        self.accountId = issue.assigneeAccountId
+
+
 if __name__ == "__main__":
     board = Board('https://megatm.atlassian.net', 'mega.7eam@gmail.com', 'satxon-7tinfu-piTpiz', 'MegaTeam', 'MEGAT board')
     board.connectToBoard()
+
+    workers = board.getWorkers()
+    for worker in workers:
+        print(worker)
+
+    # board.getAllProjectUsers()
+    # print(board.allUsers)
+
+    # print(board.allIssues[0].raw_value)
 
     # board.createNewIssue(summary="New issue3", description="Some description", issueType="Story", assigneeName="dogn2000")
     # board.findAllIssues()
