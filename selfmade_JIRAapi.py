@@ -28,25 +28,28 @@ class Board(object):
         return self.allIssues
 
     def getAllProjectUsers(self):
-        users = board.jira.search_assignable_users_for_projects(username='', projectKeys=[self.projectKey])
-        for user in users:
-            self.allUsers.append(user)
-            if user.name == 'admin':
-                self.adminUsers.append(user)
-        return users
+        users = self.jira.search_assignable_users_for_projects(username='', projectKeys=[self.projectKey])
+        print(users)
+        for i in range(len(users)):
+            curUser = User(users[i])
+            self.allUsers.append(curUser)
+            if curUser.name == 'admin':
+                self.adminUsers.append(curUser)
+        return self.allUsers
 
     def getWorkingUsers(self):
         workingUsers = set()
         for issue in self.allIssues:
             if issue.status != "Done" and issue.assigneeName is not None and issue.assigneeName != self.jira.myself()['displayName']:
                 workingUsers.add(issue.assigneeName)
-        self.workingUsers = list(workingUsers)
+        for workingUser in workingUsers:
+            self.workingUsers.append(User(self.jira.user(workingUser)))
         return self.workingUsers
 
     def getNotWorkingUsers(self):
         for user in self.allUsers:
             if user.name not in self.workingUsers:
-                self.notWorkingUsers.append(user.name)
+                self.notWorkingUsers.append(user)
         return self.notWorkingUsers
 
     def createNewIssue(self, summary, description, issueType, assigneeName):
@@ -160,33 +163,33 @@ class Issue(object):
 
 
 class User(object):
-    def __init__(self, issue):
-        self.name = issue.assigneeName
-        self.key = issue.assigneeKey
-        self.accountId = issue.assigneeAccountId
+    def __init__(self, user):
+        self.raw_value = user.raw
+        self.key = user.raw['key']
+        self.accountId = user.raw['accountId']
+        self.name = user.raw['name']
+        self.email = user.raw['emailAddress']
+        self.displayName = user.raw['displayName']
+        self.active = user.raw['active']
 
 
 if __name__ == "__main__":
     board = Board('https://megatm.atlassian.net', 'mega.7eam@gmail.com', 'satxon-7tinfu-piTpiz', 'MegaTeam', 'MEGAT board')
     board.launchBoard()
 
+
     print("Working users:")
     for workingUser in board.workingUsers:
-        print(workingUser)
-        print('--------------------')
+        print(workingUser.displayName)
 
     print("\nNot working users:")
     for notWorkingUser in board.notWorkingUsers:
-        print(notWorkingUser)
+        print(notWorkingUser.displayName)
 
     print("\nAdmins:")
     for admin in board.adminUsers:
-        print(admin)
+        print(admin.displayName)
 
-    print(board.jira.user(board.allUsers[0]).raw)
-
-    issue = board.allIssues[0]
-    print(issue.summary)
     # issue.setParams(summary="New Task", description="New task description", assigneeKey=, labels=)
 
     # board.createNewIssue(summary="New issue3", description="Some description", issueType="Story", assigneeName="dogn2000")
